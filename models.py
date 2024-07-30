@@ -59,14 +59,3 @@ class PredictionOutput(BaseModel):
 
     class Config:
         json_encoders = {ObjectId: str}
-
-class PredictionResult(BaseModel):
-    id: PyObjectId = Field(default_factory=PyObjectId, alias="_id")
-    CustomerId: int
-    Prediction: bool
-    time_stamp: datetime = Field(default_factory=datetime.utcnow)
-
-    class Config:
-        populate_by_name = True
-        arbitrary_types_allowed = True
-        json_encoders = {ObjectId: str}

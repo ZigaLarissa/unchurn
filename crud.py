@@ -5,7 +5,7 @@ from typing import List
 from models import Customer
 from sklearn.preprocessing import LabelEncoder, StandardScaler
 from sklearn.model_selection import train_test_split
-
+import joblib
 
 def get_all_customers(customers_collection: Collection) -> List[Customer]:
     customers = customers_collection.find()
@@ -28,9 +28,10 @@ def retrain_model(customers_collection, model):
     df = df.drop(['CustomerId', 'Surname', '_id'], axis=1)
     
     # Encode categorical variables
-    label_encoder = LabelEncoder()
-    df['Geography'] = label_encoder.fit_transform(df['Geography'])
-    df['Gender'] = label_encoder.fit_transform(df['Gender'])
+    label_encoder_geography = LabelEncoder()
+    label_encoder_gender = LabelEncoder()
+    df['Geography'] = label_encoder_geography.fit_transform(df['Geography'])
+    df['Gender'] = label_encoder_gender.fit_transform(df['Gender'])
     
     # Split the data into features and target
     X = df.drop('Churned', axis=1)
@@ -39,6 +40,11 @@ def retrain_model(customers_collection, model):
     # Normalize the data
     scaler = StandardScaler()
     X_normalized = scaler.fit_transform(X)
+    
+    # Save preprocessors
+    joblib.dump(label_encoder_geography, 'saved_models/label_encoder_geography.pkl')
+    joblib.dump(label_encoder_gender, 'saved_models/label_encoder_gender.pkl')
+    joblib.dump(scaler, 'saved_models/scaler.pkl')
     
     # Split the data into training, validation, and testing sets
     X_train, X_test, y_train, y_test = train_test_split(X_normalized, y, test_size=0.2, random_state=42)
@@ -70,5 +76,3 @@ def retrain_model(customers_collection, model):
     new_model.fit(X_train, y_train, epochs=100, batch_size=32, validation_data=(X_val, y_val), callbacks=[early_stopping])
     
     return new_model
-
-
