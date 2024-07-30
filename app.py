@@ -5,11 +5,12 @@ from crud import get_all_customers, insert_customer, retrain_model, insert_predi
 from database import get_database
 import pandas as pd
 import joblib
+import tensorflow as tf
 
 app = FastAPI()
 
 # Load your trained model
-model = joblib.load('model.pkl')
+model = tf.keras.models.load_model('saved_models/regularized_model.h5')
 
 @app.post("/upload-data")
 async def upload_data(file: UploadFile = File(...), db = Depends(get_database)):
