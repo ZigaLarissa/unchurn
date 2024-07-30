@@ -35,8 +35,6 @@ async def retrain_model_endpoint(db = Depends(get_database)):
 
 @app.post("/predict", response_model=PredictionOutput)
 def predict(input_data: PredictionInput, db = Depends(get_database)):
-    scaler = StandardScaler()
-
     try:
         # Convert input data to DataFrame
         input_df = pd.DataFrame([input_data.dict()])
@@ -48,21 +46,30 @@ def predict(input_data: PredictionInput, db = Depends(get_database)):
         input_df['Gender'] = label_encoder_gender.fit_transform(input_df['Gender'])
         
         # Normalize the data
+        scaler = StandardScaler()
         X = input_df.drop(columns=['CustomerId'])
         X_normalized = scaler.fit_transform(X)
         
         # Make prediction
         prediction = model.predict(X_normalized)
+        prediction_bool = bool(prediction[0][0])
+        
+        # Map the prediction to a label
+        prediction_label = "Churned" if prediction_bool else "Unchurned"
         
         # Store the prediction result
         predictions_collection = db['predictions']
         prediction_result = PredictionResult(
             CustomerId=input_data.CustomerId,
-            Prediction=bool(prediction[0][0])
+            Prediction=prediction_bool
         )
         insert_prediction(predictions_collection, prediction_result.dict(by_alias=True))
         
         # Return the prediction
-        return PredictionOutput(CustomerId=input_data.CustomerId, Prediction=bool(prediction[0][0]))
+        return PredictionOutput(
+            CustomerId=input_data.CustomerId,
+            Prediction=prediction_bool,
+            PredictionLabel=prediction_label
+        )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error making prediction: {e}")
