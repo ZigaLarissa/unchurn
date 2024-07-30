@@ -3,6 +3,8 @@ from bson import ObjectId
 import pandas as pd
 from typing import List
 from models import Customer, PredictionResult
+import tensorflow as tf
+
 
 def get_all_customers(customers_collection: Collection) -> List[Customer]:
     customers = customers_collection.find()
@@ -13,15 +15,28 @@ def insert_customer(customers_collection: Collection, customer_data: dict) -> Cu
     customer_data['_id'] = result.inserted_id
     return Customer(**customer_data)
 
-def retrain_model(customers_collection: Collection, model):
-    data = pd.DataFrame(list(customers_collection.find()))
-    if not data.empty:
-        X = data.drop(columns=['_id', 'CustomerId', 'Surname', 'Churned'])
-        y = data['Churned']
-        model.fit(X, y)
-        return model
-    else:
-        raise ValueError("No data available for training")
+
+def retrain_model(collection: Collection, model: tf.keras.Model):
+    data = get_all_customers(collection)
+    df = pd.DataFrame(data)
+
+    # Ensure the dataframe has the expected columns
+    expected_columns = ["CustomerId", "Surname", "CreditScore", "Geography", "Gender", "Age", "Tenure", "Balance", "NumOfProducts", "HasCrCard", "IsActiveMember", "EstimatedSalary", "Churned"]
+    missing_columns = [col for col in expected_columns if col not in df.columns]
+    
+    if missing_columns:
+        raise ValueError(f"Missing columns in the dataframe: {missing_columns}")
+
+    # Drop the unnecessary columns
+    df.drop(columns=["CustomerId", "Surname", "Churned"], inplace=True, errors='ignore')
+    X = df.drop(columns=["Churned"])
+    y = df["Churned"]
+
+    model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
+    model.fit(X, y, epochs=10, batch_size=32)
+
+    return model
+
 
 def insert_prediction(predictions_collection: Collection, prediction_data: dict) -> PredictionResult:
     result = predictions_collection.insert_one(prediction_data)
