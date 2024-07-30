@@ -1,6 +1,11 @@
+fastapi
+uvicorn
+pydantic
 pandas
-numpy
+scikit-learn
+joblib
+pymongo
 tensorflow
+numpy
 matplotlib
 seaborn
-scikit-learn
