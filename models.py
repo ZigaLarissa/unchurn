@@ -55,6 +55,10 @@ class PredictionInput(BaseModel):
 class PredictionOutput(BaseModel):
     CustomerId: int
     Prediction: bool
+    PredictionLabel: str
+
+    class Config:
+        json_encoders = {ObjectId: str}
 
 class PredictionResult(BaseModel):
     id: PyObjectId = Field(default_factory=PyObjectId, alias="_id")

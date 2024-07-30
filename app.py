@@ -1,16 +1,16 @@
 from fastapi import FastAPI, HTTPException, UploadFile, File, Depends
-from typing import List
 from models import Customer, PredictionInput, PredictionOutput, PredictionResult
 from crud import get_all_customers, insert_customer, retrain_model, insert_prediction
 from database import get_database
 import pandas as pd
-import joblib
 import tensorflow as tf
+from sklearn.preprocessing import LabelEncoder, StandardScaler
 
 app = FastAPI()
 
 # Load your trained model
 model = tf.keras.models.load_model('saved_models/regularized_model.h5')
+
 
 @app.post("/upload-data")
 async def upload_data(file: UploadFile = File(...), db = Depends(get_database)):
@@ -28,22 +28,41 @@ async def retrain_model_endpoint(db = Depends(get_database)):
     try:
         customers_collection = db['customers']
         new_model = retrain_model(customers_collection, model)
-        joblib.dump(new_model, 'model.pkl')
+        new_model.save('saved_models/regularized_model.h5')
         return {"message": "Model retrained successfully"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error retraining model: {e}")
 
 @app.post("/predict", response_model=PredictionOutput)
 def predict(input_data: PredictionInput, db = Depends(get_database)):
+    scaler = StandardScaler()
+
     try:
+        # Convert input data to DataFrame
         input_df = pd.DataFrame([input_data.dict()])
-        prediction = model.predict(input_df.drop(columns=['CustomerId']))
+        
+        # Encode categorical variables
+        label_encoder_geography = LabelEncoder()
+        label_encoder_gender = LabelEncoder()
+        input_df['Geography'] = label_encoder_geography.fit_transform(input_df['Geography'])
+        input_df['Gender'] = label_encoder_gender.fit_transform(input_df['Gender'])
+        
+        # Normalize the data
+        X = input_df.drop(columns=['CustomerId'])
+        X_normalized = scaler.fit_transform(X)
+        
+        # Make prediction
+        prediction = model.predict(X_normalized)
+        
+        # Store the prediction result
         predictions_collection = db['predictions']
         prediction_result = PredictionResult(
             CustomerId=input_data.CustomerId,
-            Prediction=bool(prediction[0])
+            Prediction=bool(prediction[0][0])
         )
         insert_prediction(predictions_collection, prediction_result.dict(by_alias=True))
-        return PredictionOutput(CustomerId=input_data.CustomerId, Prediction=bool(prediction[0]))
+        
+        # Return the prediction
+        return PredictionOutput(CustomerId=input_data.CustomerId, Prediction=bool(prediction[0][0]))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error making prediction: {e}")
