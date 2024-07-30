@@ -1,6 +1,6 @@
 from fastapi import FastAPI, HTTPException, UploadFile, File, Depends
 from models import Customer, PredictionInput, PredictionOutput
-from crud import get_all_customers, insert_customer, retrain_model, insert_prediction
+from crud import get_all_customers, insert_customer, retrain_model, insert_prediction, evaluate_model
 from database import get_database
 import pandas as pd
 import tensorflow as tf
@@ -85,3 +85,14 @@ def predict(input_data: PredictionInput, db = Depends(get_database)):
     except Exception as e:
         logger.error(f"Error in predict endpoint: {e}")
         raise HTTPException(status_code=500, detail=f"Error making prediction: {e}")
+
+
+@app.get("/evaluate-model")
+async def evaluate_model_endpoint(db = Depends(get_database)):
+    try:
+        customers_collection = db['customers']
+        evaluation_results = evaluate_model(customers_collection)
+        return evaluation_results
+    except Exception as e:
+        logger.error(f"Error in evaluate model endpoint: {e}")
+        raise HTTPException(status_code=500, detail=f"Error evaluating model: {e}")

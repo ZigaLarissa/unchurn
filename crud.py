@@ -76,3 +76,51 @@ def retrain_model(customers_collection, model):
     new_model.fit(X_train, y_train, epochs=100, batch_size=32, validation_data=(X_val, y_val), callbacks=[early_stopping])
     
     return new_model
+
+def evaluate_model(customers_collection):
+    # Load data from the collection
+    data = list(customers_collection.find())
+    df = pd.DataFrame(data)
+    
+    # Drop unnecessary columns
+    df = df.drop(['CustomerId', 'Surname', '_id'], axis=1)
+    
+    # Load preprocessors
+    label_encoder_geography = joblib.load('saved_models/label_encoder_geography.pkl')
+    label_encoder_gender = joblib.load('saved_models/label_encoder_gender.pkl')
+    scaler = joblib.load('saved_models/scaler.pkl')
+    
+    # Encode categorical variables
+    df['Geography'] = label_encoder_geography.transform(df['Geography'])
+    df['Gender'] = label_encoder_gender.transform(df['Gender'])
+    
+    # Split the data into features and target
+    X = df.drop('Churned', axis=1)
+    y = df['Churned']
+    
+    # Normalize the data
+    X_normalized = scaler.transform(X)
+    
+    # Load the model
+    model = tf.keras.models.load_model('saved_models/regularized_model.h5')
+    
+    # Make predictions
+    y_pred = model.predict(X_normalized)
+    y_pred_binary = (y_pred > 0.5).astype(int)
+    
+    # Calculate metrics
+    from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, roc_auc_score
+    
+    accuracy = accuracy_score(y, y_pred_binary)
+    precision = precision_score(y, y_pred_binary)
+    recall = recall_score(y, y_pred_binary)
+    f1 = f1_score(y, y_pred_binary)
+    auc_roc = roc_auc_score(y, y_pred)
+    
+    return {
+        "accuracy": accuracy,
+        "precision": precision,
+        "recall": recall,
+        "f1_score": f1,
+        "auc_roc": auc_roc
+    }
