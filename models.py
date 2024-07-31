@@ -1,6 +1,7 @@
 from pydantic import BaseModel, Field, condecimal
 from bson import ObjectId
 from datetime import datetime
+from decimal import Decimal
 
 class PyObjectId(ObjectId):
     @classmethod
@@ -21,17 +22,17 @@ class PyObjectId(ObjectId):
 class Customer(BaseModel):
     id: PyObjectId = Field(default_factory=PyObjectId, alias="_id")
     CustomerId: int
-    Surname: str
+    
     CreditScore: int
     Geography: str
     Gender: str
     Age: int
     Tenure: int
-    Balance: condecimal(max_digits=10, decimal_places=2)
+    Balance: Decimal
     NumOfProducts: int
     HasCrCard: bool
     IsActiveMember: bool
-    EstimatedSalary: condecimal(max_digits=10, decimal_places=2)
+    EstimatedSalary: Decimal
     Churned: bool
 
     class Config:
@@ -46,11 +47,11 @@ class PredictionInput(BaseModel):
     Gender: str
     Age: int
     Tenure: int
-    Balance: condecimal(max_digits=10, decimal_places=2)
+    Balance: Decimal
     NumOfProducts: int
     HasCrCard: bool
     IsActiveMember: bool
-    EstimatedSalary: condecimal(max_digits=10, decimal_places=2)
+    EstimatedSalary: Decimal
 
 class PredictionOutput(BaseModel):
     CustomerId: int
