@@ -68,4 +68,3 @@ You can interact with the API using the Swagger UI available at this URL.
 - The `data` folder should contain the Customer_Churn dataset in a compatible format (e.g., CSV) if you're working with local data.
 
 **PS:** This project is built on a virtual environment supported in Python 3.11.
-```
